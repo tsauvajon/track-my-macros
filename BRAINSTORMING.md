@@ -2,7 +2,7 @@
 
 ## Context
 
-### Macros
+### Macronutrients
 
 - fats (9 kcal per gram)
 - proteins (4 kcal per gram) 
@@ -23,6 +23,14 @@
 1. Enter goal calorie intake:
 - manually
 - calculated through weight, height and goal
+
+For males:
+
+> 10 x weight (kg) + 6.25 x height (cm) – 5 x age (y) + 5 = REE
+
+For females:
+
+> 10 x weight (kg) + 6.25 x height (cm) – 5 x age (y) – 161 = REE
 
 2. Enter repartition goal:
 - manually
