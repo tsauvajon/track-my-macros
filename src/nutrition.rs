@@ -193,6 +193,10 @@ impl Human {
                 ActivityRate::ExtremelyActive => 2.2,
             }) as Grams
     }
+
+    fn daily_fat_needs(&self) -> Grams {
+        self.weight as Grams
+    }
 }
 
 #[cfg(test)]
@@ -270,10 +274,17 @@ mod human_tests {
         for (want, activity_rate) in tc {
             assert_eq!(
                 want,
-                kevin.daily_prot_needs(activity_rate.clone()) as u64,
+                kevin.daily_prot_needs(activity_rate.clone()),
                 "{:?}",
                 activity_rate,
             );
         }
+    }
+
+    #[test]
+    fn test_daily_fat_needs() {
+        assert_eq!(70, kevin().daily_fat_needs(), "kevin");
+        assert_eq!(70, karen().daily_fat_needs(), "karen");
+        assert_eq!(93, maurice().daily_fat_needs(), "maurice");
     }
 }
