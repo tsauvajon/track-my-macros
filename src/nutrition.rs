@@ -1,6 +1,7 @@
 type Kcal = f64;
 type MilligramsPer100Gram = usize;
 type Milligrams = usize;
+type Grams = usize;
 type Kilograms = usize;
 type Centimeters = usize;
 type YearsOld = usize;
@@ -133,6 +134,7 @@ pub enum Sex {
     Female,
 }
 
+#[derive(Debug, Clone)]
 pub enum ActivityRate {
     Sedentary,        // little to no exercise + work a desk job
     LightlyActive,    // light exercise 1-3 days / week
@@ -180,6 +182,17 @@ impl Human {
                 ActivityRate::ExtremelyActive => 1.9,
             }
     }
+
+    fn daily_prot_needs(&self, activity_rate: ActivityRate) -> Grams {
+        (self.weight as f64
+            * match activity_rate {
+                ActivityRate::Sedentary => 1.0,
+                ActivityRate::LightlyActive => 1.2,
+                ActivityRate::ModeratelyActive => 1.4,
+                ActivityRate::VeryActive => 1.8,
+                ActivityRate::ExtremelyActive => 2.2,
+            }) as Grams
+    }
 }
 
 #[cfg(test)]
@@ -222,34 +235,45 @@ mod human_tests {
 
     #[test]
     fn test_tdee() {
-        assert_eq!(
-            2265,
-            kevin().tdee(ActivityRate::Sedentary) as u64,
-            "Sedentary"
-        );
+        let kevin = kevin();
 
-        assert_eq!(
-            2595,
-            kevin().tdee(ActivityRate::LightlyActive) as u64,
-            "LightlyActive"
-        );
+        let tc = vec![
+            (2265, ActivityRate::Sedentary),
+            (2595, ActivityRate::LightlyActive),
+            (2925, ActivityRate::ModeratelyActive),
+            (3255, ActivityRate::VeryActive),
+            (3586, ActivityRate::ExtremelyActive),
+        ];
 
-        assert_eq!(
-            2925,
-            kevin().tdee(ActivityRate::ModeratelyActive) as u64,
-            "ModeratelyActive"
-        );
+        for (want, activity_rate) in tc {
+            assert_eq!(
+                want,
+                kevin.tdee(activity_rate.clone()) as u64,
+                "{:?}",
+                activity_rate,
+            );
+        }
+    }
 
-        assert_eq!(
-            3255,
-            kevin().tdee(ActivityRate::VeryActive) as u64,
-            "VeryActive"
-        );
+    #[test]
+    fn test_daily_prot_needs() {
+        let kevin = kevin();
 
-        assert_eq!(
-            3586,
-            kevin().tdee(ActivityRate::ExtremelyActive) as u64,
-            "ExtremelyActive"
-        );
+        let tc = vec![
+            (70, ActivityRate::Sedentary),
+            (84, ActivityRate::LightlyActive),
+            (98, ActivityRate::ModeratelyActive),
+            (126, ActivityRate::VeryActive),
+            (154, ActivityRate::ExtremelyActive),
+        ];
+
+        for (want, activity_rate) in tc {
+            assert_eq!(
+                want,
+                kevin.daily_prot_needs(activity_rate.clone()) as u64,
+                "{:?}",
+                activity_rate,
+            );
+        }
     }
 }
