@@ -1,3 +1,4 @@
+// units
 type Kcal = f64;
 type MilligramsPer100Gram = usize;
 type Milligrams = usize;
@@ -127,6 +128,7 @@ pub struct Human {
     pub height: Centimeters,
     pub age: YearsOld,
     pub sex: Sex,
+    pub activity_rate: ActivityRate,
 }
 
 pub enum Sex {
@@ -172,9 +174,9 @@ impl Human {
     }
 
     /// Total Daily Energy Expenditure
-    fn tdee(&self, activity_rate: ActivityRate) -> Kcal {
+    fn tdee(&self) -> Kcal {
         self.bmr()
-            * match activity_rate {
+            * match self.activity_rate {
                 ActivityRate::Sedentary => 1.2,
                 ActivityRate::LightlyActive => 1.375,
                 ActivityRate::ModeratelyActive => 1.55,
@@ -183,9 +185,9 @@ impl Human {
             }
     }
 
-    fn daily_prot_needs(&self, activity_rate: ActivityRate) -> Grams {
+    fn suggest_daily_prot_needs(&self) -> Grams {
         (self.weight as f64
-            * match activity_rate {
+            * match self.activity_rate {
                 ActivityRate::Sedentary => 1.0,
                 ActivityRate::LightlyActive => 1.2,
                 ActivityRate::ModeratelyActive => 1.4,
@@ -194,8 +196,22 @@ impl Human {
             }) as Grams
     }
 
-    fn daily_fat_needs(&self) -> Grams {
+    fn suggest_daily_fat_needs(&self) -> Grams {
         self.weight as Grams
+    }
+
+    /// See https://www.nasm.org/resources/calorie-calculator
+    pub fn suggest_fixed_goal(&self) -> CalorieIntakeRepartition {
+        let prots = self.suggest_daily_prot_needs();
+        let fats = self.suggest_daily_fat_needs();
+
+        let carbs_calories_needed = self.tdee()
+            - prots as f64 * PROTEINS_CALORIES_PER_GRAM
+            - fats as f64 * FATS_CALORIES_PER_GRAM;
+
+        let carbs = (carbs_calories_needed / CARBOHYDRATES_CALORIES_PER_GRAM) as Grams;
+
+        CalorieIntakeRepartition::Fixed { prots, fats, carbs }
     }
 }
 
@@ -209,6 +225,7 @@ mod human_tests {
             height: 170,
             age: 24,
             sex: Sex::Male,
+            activity_rate: ActivityRate::ModeratelyActive,
         }
     }
 
@@ -218,6 +235,7 @@ mod human_tests {
             height: 170,
             age: 24,
             sex: Sex::Female,
+            activity_rate: ActivityRate::Sedentary,
         }
     }
 
@@ -227,6 +245,7 @@ mod human_tests {
             height: 185,
             age: 56,
             sex: Sex::Male,
+            activity_rate: ActivityRate::LightlyActive,
         }
     }
 
@@ -239,8 +258,6 @@ mod human_tests {
 
     #[test]
     fn test_tdee() {
-        let kevin = kevin();
-
         let tc = vec![
             (2265, ActivityRate::Sedentary),
             (2595, ActivityRate::LightlyActive),
@@ -250,19 +267,15 @@ mod human_tests {
         ];
 
         for (want, activity_rate) in tc {
-            assert_eq!(
-                want,
-                kevin.tdee(activity_rate.clone()) as u64,
-                "{:?}",
-                activity_rate,
-            );
+            let mut kevin = kevin();
+            kevin.activity_rate = activity_rate.clone();
+
+            assert_eq!(want, kevin.tdee() as u64, "{:?}", activity_rate,);
         }
     }
 
     #[test]
-    fn test_daily_prot_needs() {
-        let kevin = kevin();
-
+    fn test_suggest_daily_prot_needs() {
         let tc = vec![
             (70, ActivityRate::Sedentary),
             (84, ActivityRate::LightlyActive),
@@ -272,9 +285,12 @@ mod human_tests {
         ];
 
         for (want, activity_rate) in tc {
+            let mut kevin = kevin();
+            kevin.activity_rate = activity_rate.clone();
+
             assert_eq!(
                 want,
-                kevin.daily_prot_needs(activity_rate.clone()),
+                kevin.suggest_daily_prot_needs(),
                 "{:?}",
                 activity_rate,
             );
@@ -282,9 +298,54 @@ mod human_tests {
     }
 
     #[test]
-    fn test_daily_fat_needs() {
-        assert_eq!(70, kevin().daily_fat_needs(), "kevin");
-        assert_eq!(70, karen().daily_fat_needs(), "karen");
-        assert_eq!(93, maurice().daily_fat_needs(), "maurice");
+    fn test_suggest_daily_fat_needs() {
+        assert_eq!(70, kevin().suggest_daily_fat_needs(), "kevin");
+        assert_eq!(70, karen().suggest_daily_fat_needs(), "karen");
+        assert_eq!(93, maurice().suggest_daily_fat_needs(), "maurice");
     }
+
+    #[test]
+    fn test_suggest_fixed_goal() {
+        let want = CalorieIntakeRepartition::Fixed {
+            fats: 70,   // (70*9) / 2926 = 22%
+            prots: 98,  // (98*4) / 2926 = 13%
+            carbs: 475, // (475*4) / 2926 = 65%
+        };
+        assert_eq!(want, kevin().suggest_fixed_goal(), "kevin");
+
+        assert_eq!(
+            CalorieIntakeRepartition::Fixed {
+                fats: 70,
+                prots: 70,
+                carbs: 288,
+            },
+            karen().suggest_fixed_goal(),
+            "karen"
+        );
+
+        assert_eq!(
+            CalorieIntakeRepartition::Fixed {
+                fats: 93,
+                prots: 111,
+                carbs: 494,
+            },
+            maurice().suggest_fixed_goal(),
+            "maurice"
+        );
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum CalorieIntakeRepartition {
+    Fixed {
+        fats: Grams,
+        prots: Grams,
+        carbs: Grams,
+    },
+
+    Percentage {
+        fats: u64,
+        prots: u64,
+        carbs: u64,
+    },
 }

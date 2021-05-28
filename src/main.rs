@@ -13,9 +13,14 @@ allowing users to manually input their macronutrient intake.
 
 mod nutrition;
 
-use nutrition::{Food, Meal};
+use nutrition::{Food, Human, Meal};
 
 fn main() {
+    foods_and_meals();
+    goals();
+}
+
+fn foods_and_meals() {
     println!("Hello, world!");
     let peanuts = Food {
         name: "Peanuts, Raw".to_string(),
@@ -36,4 +41,16 @@ fn main() {
     };
 
     breakfast.calculate_calories();
+}
+
+fn goals() {
+    let thomas = Human {
+        weight: 81,
+        height: 176,
+        age: 28,
+        sex: nutrition::Sex::Male,
+        activity_rate: nutrition::ActivityRate::LightlyActive,
+    };
+
+    thomas.suggest_fixed_goal();
 }
