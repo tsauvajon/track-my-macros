@@ -53,4 +53,5 @@ fn goals() {
     };
 
     thomas.suggest_fixed_goal();
+    thomas.suggest_percentage_goal();
 }

@@ -213,6 +213,37 @@ impl Human {
 
         CalorieIntakeRepartition::Fixed { prots, fats, carbs }
     }
+
+    pub fn suggest_percentage_goal(&self) -> CalorieIntakeRepartition {
+        match self.suggest_fixed_goal() {
+            CalorieIntakeRepartition::Fixed { fats, carbs, prots } => {
+                let fats_calories = fats as f64 * FATS_CALORIES_PER_GRAM;
+                let prots_calories = prots as f64 * PROTEINS_CALORIES_PER_GRAM;
+                let carbs_calories = carbs as f64 * CARBOHYDRATES_CALORIES_PER_GRAM;
+
+                let total = fats_calories + prots_calories + carbs_calories;
+
+                println!(
+                    "{} {} {} {}",
+                    fats_calories, prots_calories, carbs_calories, total
+                );
+
+                let fats = (100.0 * fats_calories / total) as u64;
+                let prots = (100.0 * prots_calories / total) as u64;
+                let carbs = 100 - fats - prots;
+
+                println!(
+                    "{} {} {} {} {}",
+                    fats_calories, prots_calories, carbs_calories, fats, prots
+                );
+
+                CalorieIntakeRepartition::Percentage { fats, carbs, prots }
+            }
+            CalorieIntakeRepartition::Percentage { fats, carbs, prots } => {
+                CalorieIntakeRepartition::Percentage { fats, carbs, prots }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -306,12 +337,15 @@ mod human_tests {
 
     #[test]
     fn test_suggest_fixed_goal() {
-        let want = CalorieIntakeRepartition::Fixed {
-            fats: 70,   // (70*9) / 2926 = 22%
-            prots: 98,  // (98*4) / 2926 = 13%
-            carbs: 475, // (475*4) / 2926 = 65%
-        };
-        assert_eq!(want, kevin().suggest_fixed_goal(), "kevin");
+        assert_eq!(
+            CalorieIntakeRepartition::Fixed {
+                fats: 70,   // (70*9) / 2926 ~= 22%
+                prots: 98,  // (98*4) / 2926 ~= 13%
+                carbs: 475, // (475*4) / 2926 ~= 65%
+            },
+            kevin().suggest_fixed_goal(),
+            "kevin"
+        );
 
         assert_eq!(
             CalorieIntakeRepartition::Fixed {
@@ -330,6 +364,39 @@ mod human_tests {
                 carbs: 494,
             },
             maurice().suggest_fixed_goal(),
+            "maurice"
+        );
+    }
+
+    #[test]
+    fn test_suggest_percentage_goal() {
+        assert_eq!(
+            CalorieIntakeRepartition::Percentage {
+                fats: 21,
+                prots: 13,
+                carbs: 66,
+            },
+            kevin().suggest_percentage_goal(),
+            "kevin"
+        );
+
+        assert_eq!(
+            CalorieIntakeRepartition::Percentage {
+                fats: 30,
+                prots: 13,
+                carbs: 57,
+            },
+            karen().suggest_percentage_goal(),
+            "karen"
+        );
+
+        assert_eq!(
+            CalorieIntakeRepartition::Percentage {
+                fats: 25,
+                prots: 13,
+                carbs: 62,
+            },
+            maurice().suggest_percentage_goal(),
             "maurice"
         );
     }
